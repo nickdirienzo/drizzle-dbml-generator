@@ -28,7 +28,7 @@ export function isBuilderObj(val: unknown): val is BuilderObj {
   return typeof val === 'object' && val !== null && typeof (val as any).build === 'function';
 }
 
-  /** In drizzle-orm 0.40+, pgTable is now an array of keyed Builder objects. */
+/** In drizzle-orm 0.40+, pgTable is now an array of keyed Builder objects. */
 export type BuilderRecord = Record<string, BuilderObj>;
 export function isBuilderRecord(val: unknown): val is BuilderRecord {
   if (typeof val !== 'object' || val === null) return false;
@@ -36,9 +36,7 @@ export function isBuilderRecord(val: unknown): val is BuilderRecord {
   // Make sure that every value in the record is a BuilderObj.
   return Object.values(val).every(
     (entry) =>
-      typeof entry === 'object' &&
-      entry !== null &&
-      typeof (entry as any).build === 'function'
+      typeof entry === 'object' && entry !== null && typeof (entry as any).build === 'function'
   );
 }
 

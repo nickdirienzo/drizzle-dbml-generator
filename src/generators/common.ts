@@ -53,7 +53,13 @@ import type {
   SQLiteInlineForeignKeys
 } from '~/symbols';
 import type { AnyColumn, BuildQueryConfig } from 'drizzle-orm';
-import { isBuilderObj, isBuilderRecord, type AnyBuilder, type AnySchema, type AnyTable } from '~/types';
+import {
+  isBuilderObj,
+  isBuilderRecord,
+  type AnyBuilder,
+  type AnySchema,
+  type AnyTable
+} from '~/types';
 
 export abstract class BaseGenerator<
   Schema extends AnySchema = AnySchema,
@@ -162,23 +168,21 @@ export abstract class BaseGenerator<
     const extraConfig = extraConfigBuilder?.(extraConfigColumns ?? {});
 
     const builtIndexes = (
-  Array.isArray(extraConfig)
-    ? extraConfig
-    : Object.values(extraConfig ?? {})
-)
-  .flatMap((b: AnyBuilder) => {
-  if (isBuilderObj(b)) {
-    return [b.build(table)];
-  }
+      Array.isArray(extraConfig) ? extraConfig : Object.values(extraConfig ?? {})
+    )
+      .flatMap((b: AnyBuilder) => {
+        if (isBuilderObj(b)) {
+          return [b.build(table)];
+        }
 
-  if (isBuilderRecord(b)) {
-    return Object.values(b).map((builder) => builder.build(table));
-  }
+        if (isBuilderRecord(b)) {
+          return Object.values(b).map((builder) => builder.build(table));
+        }
 
-  return [];
-})
-  // The DBML markup language doesn't support check constraints
-  .filter((index) => !(is(index, PgCheck) || is(index, MySqlCheck) || is(index, SQLiteCheck)));
+        return [];
+      })
+      // The DBML markup language doesn't support check constraints
+      .filter((index) => !(is(index, PgCheck) || is(index, MySqlCheck) || is(index, SQLiteCheck)));
     const fks = builtIndexes.filter(
       (index) =>
         is(index, PgForeignKey) || is(index, MySqlForeignKey) || is(index, SQLiteForeignKey)
