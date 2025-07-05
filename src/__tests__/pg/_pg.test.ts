@@ -176,6 +176,94 @@ async function indexesTest() {
   expect(result).toBe(true);
 }
 
+async function indexesAsArrayTest() {
+  const table = pgTable(
+    'table',
+    {
+      f1: integer('f1'),
+      f2: integer('f2'),
+      f3: integer('f3'),
+      f4: integer('f4')
+    },
+    (tbl) => [primaryKey(tbl.f1, tbl.f2),
+      unique('key_1').on(tbl.f1),
+      unique('key_2').on(tbl.f1, tbl.f2),
+      uniqueIndex('key_3').on(tbl.f2.asc()),
+      index('key_4').on(tbl.f3.desc()),
+      index('key_5').on(tbl.f3, tbl.f4),
+      index('key_6').on(tbl.f1.nullsFirst().desc()),
+      index().on(tbl.f4),
+      index('key_7').using('btree', tbl.f1.asc(), sql`lower(${tbl.f2})`)
+    ]
+  );
+
+  const schema = { table };
+  const out = `${pathPrefix}indexes.generated.dbml`;
+  pgGenerate({ schema, out });
+
+  const result = await compareContents(out);
+  expect(result).toBe(true);
+}
+
+async function indexesAsObjectTest() {
+  const table = pgTable(
+    'table',
+    {
+      f1: integer('f1'),
+      f2: integer('f2'),
+      f3: integer('f3'),
+      f4: integer('f4')
+    },
+    (tbl) => [{ pk: primaryKey(tbl.f1, tbl.f2)},
+      { unique: unique('key_1').on(tbl.f1) },
+      { unique: unique('key_2').on(tbl.f1, tbl.f2) },
+      { uniqueIndex: uniqueIndex('key_3').on(tbl.f2.asc()) },
+      { index: index('key_4').on(tbl.f3.desc()) },
+      { index: index('key_5').on(tbl.f3, tbl.f4) },
+      { index: index('key_6').on(tbl.f1.nullsFirst().desc()) },
+      { index: index().on(tbl.f4) },
+      { index: index('key_7').using('btree', tbl.f1.asc(), sql`lower(${tbl.f2})`) }
+    ]
+  );
+
+  const schema = { table };
+  const out = `${pathPrefix}indexes.generated.dbml`;
+  pgGenerate({ schema, out });
+
+  const result = await compareContents(out);
+  expect(result).toBe(true);
+}
+
+async function indexesAsSingleObjectTest() {
+  const table = pgTable(
+    'table',
+    {
+      f1: integer('f1'),
+      f2: integer('f2'),
+      f3: integer('f3'),
+      f4: integer('f4')
+    },
+    (tbl) => [{
+      pk: primaryKey(tbl.f1, tbl.f2),
+      unique1: unique('key_1').on(tbl.f1),
+      unique2: unique('key_2').on(tbl.f1, tbl.f2),
+      uniqueIndex: uniqueIndex('key_3').on(tbl.f2.asc()),
+      index1: index('key_4').on(tbl.f3.desc()),
+      index2: index('key_5').on(tbl.f3, tbl.f4),
+      index3: index('key_6').on(tbl.f1.nullsFirst().desc()),
+      index4: index().on(tbl.f4),
+      index5: index('key_7').using('btree', tbl.f1.asc(), sql`lower(${tbl.f2})`)
+    }]
+  );
+
+  const schema = { table };
+  const out = `${pathPrefix}indexes.generated.dbml`;
+  pgGenerate({ schema, out });
+
+  const result = await compareContents(out);
+  expect(result).toBe(true);
+}
+
 async function schemasTest() {
   const schema1 = pgSchema('schema1');
   const schema2 = pgSchema('schema2');
@@ -385,6 +473,9 @@ describe('Postgres dialect tests', () => {
   it('Outputs an inline foreign key', inlineFkTest);
   it('Outputs a foreign key', fkTest);
   it('Outputs all indexes', indexesTest);
+  it('Outputs all indexes when using array syntax', indexesAsArrayTest);
+  it('Outputs all indexes when using object syntax', indexesAsObjectTest);
+  it('Outputs all indexes when using single object syntax', indexesAsSingleObjectTest);
   it('Outputs tables with different schemas', schemasTest);
   it('Outputs relations written with the RQB API', rqbTest);
   it('Outputs tables with different schemas with the RQB API', schemasRQBTest);
