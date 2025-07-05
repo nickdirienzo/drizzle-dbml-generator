@@ -18,9 +18,31 @@ export type AnyTable = Table['_']['columns'] & {
   [ExtraConfigColumns]: Record<string, AnyColumn> | undefined;
 };
 
-export type AnyBuilder = {
-  build: (table: AnyTable) => UniqueConstraint | PrimaryKey | ForeignKey | Index;
-};
+type BuilderFn = (table: AnyTable) => UniqueConstraint | PrimaryKey | ForeignKey | Index;
+export function isBuilderFn(val: unknown): val is BuilderFn {
+  return typeof val === 'function';
+}
+
+type BuilderObj = { build: BuilderFn };
+export function isBuilderObj(val: unknown): val is BuilderObj {
+  return typeof val === 'object' && val !== null && typeof (val as any).build === 'function';
+}
+
+  /** In drizzle-orm 0.40+, pgTable is now an array of keyed Builder objects. */
+export type BuilderRecord = Record<string, BuilderObj>;
+export function isBuilderRecord(val: unknown): val is BuilderRecord {
+  if (typeof val !== 'object' || val === null) return false;
+
+  // Make sure that every value in the record is a BuilderObj.
+  return Object.values(val).every(
+    (entry) =>
+      typeof entry === 'object' &&
+      entry !== null &&
+      typeof (entry as any).build === 'function'
+  );
+}
+
+export type AnyBuilder = BuilderObj | BuilderRecord;
 export type Options<Schema> = {
   schema: Schema;
   out?: string;

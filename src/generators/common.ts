@@ -53,7 +53,7 @@ import type {
   SQLiteInlineForeignKeys
 } from '~/symbols';
 import type { AnyColumn, BuildQueryConfig } from 'drizzle-orm';
-import type { AnyBuilder, AnySchema, AnyTable } from '~/types';
+import { isBuilderObj, isBuilderRecord, type AnyBuilder, type AnySchema, type AnyTable } from '~/types';
 
 export abstract class BaseGenerator<
   Schema extends AnySchema = AnySchema,
@@ -162,12 +162,23 @@ export abstract class BaseGenerator<
     const extraConfig = extraConfigBuilder?.(extraConfigColumns ?? {});
 
     const builtIndexes = (
-      Array.isArray(extraConfig) ? extraConfig : Object.values(extraConfig ?? {})
-    )
-      .map((b: AnyBuilder) => b?.build(table))
-      .filter((b) => b !== undefined)
-      // The DBML markup language doesn't support check constraints
-      .filter((index) => !(is(index, PgCheck) || is(index, MySqlCheck) || is(index, SQLiteCheck)));
+  Array.isArray(extraConfig)
+    ? extraConfig
+    : Object.values(extraConfig ?? {})
+)
+  .flatMap((b: AnyBuilder) => {
+  if (isBuilderObj(b)) {
+    return [b.build(table)];
+  }
+
+  if (isBuilderRecord(b)) {
+    return Object.values(b).map((builder) => builder.build(table));
+  }
+
+  return [];
+})
+  // The DBML markup language doesn't support check constraints
+  .filter((index) => !(is(index, PgCheck) || is(index, MySqlCheck) || is(index, SQLiteCheck)));
     const fks = builtIndexes.filter(
       (index) =>
         is(index, PgForeignKey) || is(index, MySqlForeignKey) || is(index, SQLiteForeignKey)
@@ -177,13 +188,16 @@ export abstract class BaseGenerator<
       this.generateForeignKeys(fks);
     }
 
-    if (extraConfigBuilder && builtIndexes.length > fks.length) {
-      const indexes = extraConfig ?? {};
+    // Filter out non-index constraints (FKs, checks) to get only indexes/constraints for the indexes block
+    const indexesOnly = builtIndexes.filter(
+      (index) =>
+        !(is(index, PgForeignKey) || is(index, MySqlForeignKey) || is(index, SQLiteForeignKey))
+    );
 
+    if (extraConfigBuilder && indexesOnly.length > 0) {
       dbml.newLine().tab().insert('indexes {').newLine();
 
-      for (const indexName in indexes) {
-        const index = indexes[indexName].build(table);
+      for (const index of indexesOnly) {
         dbml.tab(2);
 
         if (is(index, PgIndex) || is(index, MySqlIndex) || is(index, SQLiteIndex)) {
